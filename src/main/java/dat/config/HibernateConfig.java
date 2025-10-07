@@ -17,26 +17,28 @@ public class HibernateConfig {
 
     private static EntityManagerFactory emf;
     private static EntityManagerFactory emfTest;
-    private static Boolean isTest = false;
+    private static boolean isTest = false; // RETTET: Fra Boolean til boolean
 
-    public static void setTest(Boolean test) {
+    // RETTET: Fra Boolean til boolean
+    public static void setTest(boolean test) {
         isTest = test;
     }
 
-    public static Boolean getTest() {
+    // RETTET: Fra Boolean til boolean
+    public static boolean isTest() {
         return isTest;
     }
 
     public static EntityManagerFactory getEntityManagerFactory() {
         if (emf == null)
-            emf = createEMF(getTest());
+            emf = createEMF(isTest()); // Bruger isTest() direkte
         return emf;
     }
 
     public static EntityManagerFactory getEntityManagerFactoryForTest() {
         if (emfTest == null){
-            setTest(true);
-            emfTest = createEMF(getTest());  // No DB needed for test
+            setTest(true); // Denne virker nu, fordi setTest forventer en boolean
+            emfTest = createEMF(isTest());
         }
         return emfTest;
     }
@@ -53,7 +55,6 @@ public class HibernateConfig {
         try {
             Configuration configuration = new Configuration();
             Properties props = new Properties();
-            // Set the properties
             setBaseProperties(props);
             if (forTest) {
                 props = setTestProperties(props);
@@ -69,8 +70,7 @@ public class HibernateConfig {
                     .applySettings(configuration.getProperties())
                     .build();
             SessionFactory sf = configuration.buildSessionFactory(serviceRegistry);
-            EntityManagerFactory emf = sf.unwrap(EntityManagerFactory.class);
-            return emf;
+            return sf.unwrap(EntityManagerFactory.class); // Simpelt return
         }
         catch (Throwable ex) {
             System.err.println("Initial SessionFactory creation failed." + ex);
@@ -81,7 +81,7 @@ public class HibernateConfig {
     private static Properties setBaseProperties(Properties props) {
         props.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         props.put("hibernate.connection.driver_class", "org.postgresql.Driver");
-        props.put("hibernate.hbm2ddl.auto", "create");
+        props.put("hibernate.hbm2ddl.auto", "update"); // Ændret til 'update' for at undgå at slette data ved hver start
         props.put("hibernate.current_session_context_class", "thread");
         props.put("hibernate.show_sql", "true");
         props.put("hibernate.format_sql", "true");
@@ -90,14 +90,16 @@ public class HibernateConfig {
     }
 
     private static Properties setDeployedProperties(Properties props) {
-        String DBName = System.getenv("DB_NAME");
-        props.setProperty("hibernate.connection.url", System.getenv("CONNECTION_STR") + DBName);
+        // Bruger de variabler du allerede har defineret i din .env fil
+        props.setProperty("hibernate.connection.url", System.getenv("CONNECTION_STR"));
         props.setProperty("hibernate.connection.username", System.getenv("DB_USERNAME"));
         props.setProperty("hibernate.connection.password", System.getenv("DB_PASSWORD"));
         return props;
     }
 
     private static Properties setDevProperties(Properties props) {
+        // Denne del vil nu give en fejl, fordi den leder efter 'config.properties', som ikke er en del af server-setup'et.
+        // Men det er OK, fordi på serveren vil setDeployedProperties blive kaldt i stedet.
         String DBName = Utils.getPropertyValue("DB_NAME", "config.properties");
         props.put("hibernate.connection.url", "jdbc:postgresql://localhost:5432/" + DBName);
         props.put("hibernate.connection.username", "postgres");
@@ -106,14 +108,13 @@ public class HibernateConfig {
     }
 
     private static Properties setTestProperties(Properties props) {
-        //props.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         props.put("hibernate.connection.driver_class", "org.testcontainers.jdbc.ContainerDatabaseDriver");
         props.put("hibernate.connection.url", "jdbc:tc:postgresql:15.3-alpine3.18:///test_db");
         props.put("hibernate.connection.username", "postgres");
         props.put("hibernate.connection.password", "postgres");
         props.put("hibernate.archive.autodetection", "class");
         props.put("hibernate.show_sql", "true");
-        props.put("hibernate.hbm2ddl.auto", "create-drop"); // update for production
+        props.put("hibernate.hbm2ddl.auto", "create-drop");
         return props;
     }
 }
