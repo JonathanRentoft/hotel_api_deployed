@@ -15,7 +15,7 @@ import java.util.Properties;
 public class HibernateConfig {
 
     private static EntityManagerFactory emf;
-    private static boolean isTest = false; // Simpel boolean, da den kun er true/false
+    private static boolean isTest = false;
 
     public static EntityManagerFactory getEntityManagerFactory() {
         if (emf == null) {
@@ -47,18 +47,18 @@ public class HibernateConfig {
 
             // Håndtering af forskellige miljøer
             if (isTest) {
-                // Test-database opsætning
+                // Test-database
                 props.put("hibernate.connection.driver_class", "org.testcontainers.jdbc.ContainerDatabaseDriver");
                 props.put("hibernate.connection.url", "jdbc:tc:postgresql:15.3-alpine3.18:///test_db");
                 props.put("hibernate.hbm2ddl.auto", "create-drop");
             } else if (System.getenv("DEPLOYED") != null) {
-                // Server (DigitalOcean) opsætning
+                // Server (DigitalOcean)
                 props.setProperty("hibernate.connection.url", System.getenv("CONNECTION_STR"));
                 props.setProperty("hibernate.connection.username", System.getenv("DB_USERNAME"));
                 props.setProperty("hibernate.connection.password", System.getenv("DB_PASSWORD"));
                 props.put("hibernate.hbm2ddl.auto", "update");
             } else {
-                // Lokal udviklings-opsætning
+                // Lokal udvikling (IntelliJ)
                 props.put("hibernate.connection.url", "jdbc:postgresql://localhost:5432/hotel");
                 props.put("hibernate.connection.username", "postgres");
                 props.put("hibernate.connection.password", "postgres");
@@ -68,10 +68,7 @@ public class HibernateConfig {
             configuration.setProperties(props);
 
             // Tilføj dine entity-klasser
-            configuration.addAnnotatedClass(Hotel.class);
-            configuration.addAnnotatedClass(Room.class);
-            configuration.addAnnotatedClass(User.class);
-            configuration.addAnnotatedClass(Role.class);
+            addAnnotatedClasses(configuration);
 
             ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder()
                     .applySettings(configuration.getProperties())
@@ -82,5 +79,12 @@ public class HibernateConfig {
             System.err.println("Initial SessionFactory creation failed." + ex);
             throw new ExceptionInInitializerError(ex);
         }
+    }
+
+    private static void addAnnotatedClasses(Configuration configuration) {
+        configuration.addAnnotatedClass(Hotel.class);
+        configuration.addAnnotatedClass(Room.class);
+        configuration.addAnnotatedClass(User.class);
+        configuration.addAnnotatedClass(Role.class);
     }
 }
